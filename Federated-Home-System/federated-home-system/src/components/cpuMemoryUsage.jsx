@@ -1,84 +1,177 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  ProgressBar,
+  Row,
+  Col,
+  Spinner,
+  Button,
+} from "react-bootstrap";
 
 const CpuMemoryUsage = () => {
   const [cpuData, setCpuData] = useState({});
   const [memoryData, setMemoryData] = useState({});
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
-  useEffect(() => {
-    const fetchCpuMemory = async () => {
-      try {
-        const response = await fetch('http://127.0.0.1:5000/api/cpu_memory'); // Flask API endpoint
-        const data = await response.json();
-
-        if (data.status === 'Success') {
-          setCpuData(data.cpu);
-          setMemoryData(data.memory);
-        } else {
-          console.error('Error fetching CPU and memory data:', data.error);
-        }
-      } catch (error) {
-        console.error('Error:', error);
-      } finally {
-        setLoading(false);
+  const fetchStats = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        "http://127.0.0.1:5000/api/cpu_memory"
+      );
+      const data = await response.json();
+      if (data.status === "Success") {
+        setCpuData(data.cpu || {});
+        setMemoryData(data.memory || {});
+        setLastUpdated(new Date());
+      } else {
+        console.error("Error fetching stats:", data.error);
       }
-    };
+    } catch (error) {
+      console.error("Fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchCpuMemory();
+  /* useEffect(() => {
+    fetchStats();
+    const interval = setInterval(fetchStats, 30000); // auto-refresh every 30s
+    return () => clearInterval(interval);
+  }, []); */
+  useEffect(() => {
+    setLoading(false);
+    setCpuData({
+      Core_0: 25,
+      Core_1: 40,
+      Core_2: 72,
+      Core_3: 85,
+    });
+    setMemoryData({
+      total: 8388608, // 8 GB in KB
+      used: 5242880, // 5 GB used
+      buffers: 262144,
+      cached: 734003,
+      free: 314573,
+    });
+    setLastUpdated(new Date());
   }, []);
 
-  return (
-    <div className="mt-4">
-      <h3>⚙️ CPU and Memory Usage</h3>
-      <div className="card mt-4">
-        <div className="card-body">
-          {loading ? (
-            <p>Loading CPU and memory data...</p>
-          ) : (
-            <>
-              {/* CPU Usage Table */}
-              <h5>CPU Usage</h5>
-              <table className="table table-striped">
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Percentage</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(cpuData).map(([key, value], index) => (
-                    <tr key={index}>
-                      <td>{key}</td>
-                      <td>{value}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Memory Usage Table */}
-              <h5>Memory Usage</h5>
-              <table className="table table-striped">
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(memoryData).map(([key, value], index) => (
-                    <tr key={index}>
-                      <td>{key}</td>
-                      <td>{parseInt(value).toLocaleString()} KB</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </>
-          )}
-        </div>
+  if (loading) {
+    return (
+      <div className="text-center my-4">
+        <Spinner animation="border" />
+        <div>Loading CPU & Memory Stats...</div>
       </div>
-    </div>
+    );
+  }
+
+  // Determine total memory if available
+  const totalMem =
+    memoryData.total ||
+    Object.values(memoryData).reduce(
+      (sum, val) => sum + parseInt(val || 0),
+      0
+    );
+
+  return (
+    <Card className="mb-4">
+      <Card.Header className="d-flex justify-content-between align-items-center">
+        <h5 className="mb-0">⚙️ CPU & Memory Usage</h5>
+        <Button
+          variant="outline-secondary"
+          size="sm"
+          onClick={fetchStats}
+        >
+          Refresh
+        </Button>
+      </Card.Header>
+      <Card.Body>
+        <p className="text-muted small">
+          Last updated: {lastUpdated?.toLocaleTimeString()}
+        </p>
+        <Row className="mb-4">
+          <Col md={6}>
+            <h6>CPU Usage</h6>
+            {Object.entries(cpuData).map(
+              ([core, percent], idx) => (
+                <div key={idx} className="mb-2">
+                  <div className="d-flex justify-content-between">
+                    <small>{core}</small>
+                    <small>{percent}%</small>
+                  </div>
+                  <ProgressBar
+                    now={percent}
+                    label={`${percent}%`}
+                    variant={
+                      percent > 80 ? "danger" : "success"
+                    }
+                  />
+                </div>
+              )
+            )}
+          </Col>
+          <Col md={6}>
+            <h6>Memory Usage</h6>
+            {totalMem > 0 && (
+              <div className="mb-3">
+                <div className="d-flex justify-content-between">
+                  <small>Used</small>
+                  <small>
+                    {formatKB(memoryData.used)} /{" "}
+                    {formatKB(totalMem)}
+                  </small>
+                </div>
+                <ProgressBar
+                  now={Math.round(
+                    (memoryData.used / totalMem) * 100
+                  )}
+                  label={`${Math.round(
+                    (memoryData.used / totalMem) * 100
+                  )}%`}
+                  variant={
+                    memoryData.used / totalMem > 0.8
+                      ? "danger"
+                      : "info"
+                  }
+                />
+              </div>
+            )}
+            <table className="table table-sm table-borderless mb-0">
+              <tbody>
+                {Object.entries(memoryData)
+                  .filter(
+                    ([key]) =>
+                      key !== "used" && key !== "total"
+                  )
+                  .map(([key, val], idx) => (
+                    <tr key={idx}>
+                      <td>
+                        <strong>{key}</strong>
+                      </td>
+                      <td className="text-end">
+                        {formatKB(val)}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </Col>
+        </Row>
+      </Card.Body>
+    </Card>
   );
 };
+
+// Helper to format KB to human-readable
+function formatKB(kb) {
+  const value = parseInt(kb, 10);
+  if (value >= 1024 * 1024)
+    return `${(value / (1024 * 1024)).toFixed(1)} GB`;
+  if (value >= 1024)
+    return `${(value / 1024).toFixed(1)} MB`;
+  return `${value} KB`;
+}
 
 export default CpuMemoryUsage;

@@ -1,9 +1,14 @@
-// App.js
 import React, { useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css"; // Import Bootstrap CSS
 import "./styles/styles.css"; // Import your custom CSS
 import Navbar from "./components/Navbar";
-import { Modal, Button } from "react-bootstrap";
+import {
+  Modal,
+  Button,
+  Container,
+  Row,
+  Col,
+} from "react-bootstrap";
 import SecurityCard from "./components/SecurityCard";
 import DeviceList from "./components/DeviceList";
 import TrafficMonitoring from "./components/TrafficMonitoring";
@@ -14,12 +19,16 @@ import SystemData from "./components/systemData";
 import RouterInfo from "./components/RouterInfo";
 
 function App() {
-  const [showRouterModal, setShowRouterModal] =
-    useState(true);
+  const [showRouterModal, setShowRouterModal] = useState(
+    () => {
+      return !localStorage.getItem("routerInfo");
+    }
+  );
 
   const handleClose = () => setShowRouterModal(false);
+
   return (
-    <div>
+    <>
       <Modal
         show={showRouterModal}
         onHide={handleClose}
@@ -38,26 +47,36 @@ function App() {
           </Button>
         </Modal.Footer>
       </Modal>
+
       <Navbar />
-      <div className="container mt-4">
-        <div className="row">
-          <div className="col-md-4">
-            <h3 className="mb-4">
+
+      <Container fluid className="mt-4">
+        <Row>
+          {/* Left column: Security & Console */}
+          <Col lg={4} md={12} className="mb-4">
+            <h5 className="mb-3">
               🛡️ Network & Device Security
-            </h3>
+            </h5>
             <SecurityCard />
-            <DevicesAtRisk />
-            <h3 className="mt-4 mb-3">🖳 System Console</h3>
+            <DevicesAtRisk className="mt-4" />
+
+            <h5 className="mt-5 mb-3">🖳 System Console</h5>
             <ConsoleOutput />
-          </div>
-          <div className="col-md-8">
+          </Col>
+
+          {/* Right column: TrafficMonitoring, then stacked DeviceList & SystemData */}
+          <Col lg={8} md={12} className="mb-4">
             <TrafficMonitoring />
-            <DeviceList />
-          </div>
-          <SystemData />
-        </div>
-      </div>
-    </div>
+
+            {/* Stacked below TrafficMonitoring */}
+            <div className="mt-4">
+              <DeviceList className="mb-4" />
+              <SystemData />
+            </div>
+          </Col>
+        </Row>
+      </Container>
+    </>
   );
 }
 
