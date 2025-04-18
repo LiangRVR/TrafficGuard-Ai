@@ -1,4 +1,5 @@
 # stuff that shouldn't be tracked
+./__pycache__/
 **/__pycache__/
 .venv/
 **/.venv/
