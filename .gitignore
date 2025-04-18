@@ -1,0 +1,4 @@
+# stuff that shouldn't be tracked
+**/__pycache__/
+**/venv
+.venv/
