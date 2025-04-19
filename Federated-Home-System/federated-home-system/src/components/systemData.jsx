@@ -61,11 +61,15 @@ const SystemData = () => {
     return <p>Loading system data...</p>;
   }
 
+  let filteredRules = []
+
   const rules = data.firewallRules?.firewall_rules || [];
-  const filteredRules = rules.filter(
-    (r) =>
-      filterAction === "All" || r.action === filterAction
-  );
+    // rules is a string. The following results in an error
+  // filteredRules = rules.filter(
+  //   (r) =>
+  //     filterAction === "All" || r.action === filterAction
+  // );
+
 
   return (
     <div className="row">

@@ -18,7 +18,7 @@ const RouterInfo = () => {
     ipAddress: "",
     username: "",
     password: "",
-    port: "",
+    port: "22", // default port
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
