@@ -8,7 +8,11 @@ body {
     height: 60px;
     line-height: 60px;
   }
-  
+
+  .navbar > .container {
+    overflow: visible;
+  }
+
   /* Table spacing */
   .table {
     margin-top: 20px;
