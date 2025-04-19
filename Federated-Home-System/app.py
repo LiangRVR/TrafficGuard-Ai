@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from getRouterData import get_router_data_via_ssh
 import sqlite3
@@ -24,6 +24,24 @@ commands = {
     "bandwidth": "cat /proc/net/dev"
 }
 
+@app.route('/api/router', methods=['GET', 'POST'])
+def get_router():
+    req = request.get_json()
+    try:
+        get_router_data_via_ssh(req["ipAddress"], req["username"], req["password"], "echo \"success?\"")
+        router_ip = req["ipAddress"]
+        username = req["username"]
+        password = req["password"]
+        data = {
+            "message": "Connection to the router was successful",
+            "status": "Success"
+        }
+        return (jsonify(data))
+    except Exception as e:
+        return jsonify({ "message": "Failed to connect", "status": "Error", "error": str(e) })
+
+
+    
 
 @app.route('/api/data', methods=['GET'])
 def get_data():
