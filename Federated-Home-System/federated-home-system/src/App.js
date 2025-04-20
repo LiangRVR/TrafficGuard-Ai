@@ -1,82 +1,63 @@
+// App.js
 import React, { useState } from "react";
-import "bootstrap/dist/css/bootstrap.min.css"; // Import Bootstrap CSS
-import "./styles/styles.css"; // Import your custom CSS
-import Navbar from "./components/Navbar";
 import {
-  Modal,
-  Button,
-  Container,
-  Row,
-  Col,
-} from "react-bootstrap";
-import SecurityCard from "./components/SecurityCard";
-import DeviceList from "./components/DeviceList";
-import TrafficMonitoring from "./components/TrafficMonitoring";
-import DevicesAtRisk from "./components/BandwidthUsage";
-import ConsoleOutput from "./components/console";
-import FetchDataButton from "./components/fetchData";
-import SystemData from "./components/systemData";
-import RouterInfo from "./components/RouterInfo";
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import "bootstrap/dist/css/bootstrap.min.css";
+import "./styles/styles.css";
+
+import Setup from "./components/Setup"; // we'll alias RouterInfo as Setup
+import Dashboard from "./components/Dashboard"; // new dashboard wrapper
+import Navbar from "./components/Navbar"; // new navbar wrapper
 
 function App() {
-  const [showRouterModal, setShowRouterModal] = useState(
-    () => {
-      return !localStorage.getItem("routerInfo");
-    }
+  // Tracks whether we've saved routerInfo
+  const [configured, setConfigured] = useState(
+    () => !!localStorage.getItem("routerInfo")
   );
 
-  const handleClose = () => setShowRouterModal(false);
+  // Called by Setup when form submits successfully
+  const handleConfigured = () => setConfigured(true);
 
   return (
-    <>
-      <Modal
-        show={showRouterModal}
-        onHide={handleClose}
-        backdrop="static"
-        keyboard={false}
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>Router Setup</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <RouterInfo />
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={handleClose}>
-            Close
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
+    <BrowserRouter>
       <Navbar />
 
-      <Container fluid className="mt-4">
-        <Row>
-          {/* Left column: Security & Console */}
-          <Col lg={4} md={12} className="mb-4">
-            <h5 className="mb-3">
-              🛡️ Network & Device Security
-            </h5>
-            <SecurityCard />
-            <DevicesAtRisk className="mt-4" />
+      <Routes>
+        {/* Setup route */}
+        <Route
+          path="/setup"
+          element={<Setup onSuccess={handleConfigured} />}
+        />
 
-            <h5 className="mt-5 mb-3">🖳 System Console</h5>
-            <ConsoleOutput />
-          </Col>
+        {/* Dashboard route; if not configured, redirect to /setup */}
+        <Route
+          path="/"
+          element={
+            configured ? (
+              <Dashboard />
+            ) : (
+              <Navigate to="/setup" replace />
+            )
+          }
+        />
 
-          {/* Right column: TrafficMonitoring, then stacked DeviceList & SystemData */}
-          <Col lg={8} md={12} className="mb-4">
-            <TrafficMonitoring />
-
-            {/* Stacked below TrafficMonitoring */}
-            <div className="mt-4">
-              <DeviceList className="mb-4" />
-              <SystemData />
-            </div>
-          </Col>
-        </Row>
-      </Container>
-    </>
+        {/* Catch-all: send unknown URLs to dashboard or setup */}
+        <Route
+          path="*"
+          element={
+            configured ? (
+              <Navigate to="/" replace />
+            ) : (
+              <Navigate to="/setup" replace />
+            )
+          }
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

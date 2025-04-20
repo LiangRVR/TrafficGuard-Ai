@@ -35,27 +35,10 @@ const CpuMemoryUsage = () => {
     }
   };
 
-  /* useEffect(() => {
+  useEffect(() => {
     fetchStats();
     const interval = setInterval(fetchStats, 30000); // auto-refresh every 30s
     return () => clearInterval(interval);
-  }, []); */
-  useEffect(() => {
-    setLoading(false);
-    setCpuData({
-      Core_0: 25,
-      Core_1: 40,
-      Core_2: 72,
-      Core_3: 85,
-    });
-    setMemoryData({
-      total: 8388608, // 8 GB in KB
-      used: 5242880, // 5 GB used
-      buffers: 262144,
-      cached: 734003,
-      free: 314573,
-    });
-    setLastUpdated(new Date());
   }, []);
 
   if (loading) {

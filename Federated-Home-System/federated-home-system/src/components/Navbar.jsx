@@ -7,6 +7,7 @@ import InputGroup from "react-bootstrap/InputGroup";
 import FormControl from "react-bootstrap/FormControl";
 import Button from "react-bootstrap/Button";
 import { Bell } from "react-bootstrap-icons";
+import { Link } from "react-router-dom";
 
 function AppNavbar() {
   return (
@@ -18,7 +19,8 @@ function AppNavbar() {
     >
       <Container>
         <Navbar.Brand
-          href="#home"
+          as={Link}
+          to="/"
           className="d-flex align-items-center"
         >
           🏠 FrED IoT Home System
@@ -30,6 +32,9 @@ function AppNavbar() {
         >
           {/* Left links */}
           <Nav className="me-auto align-items-center">
+            <Nav.Link as={Link} to="/setup">
+              Settings 🔧
+            </Nav.Link>
             <Nav.Link href="#iot-devices">
               IoT Devices
             </Nav.Link>
