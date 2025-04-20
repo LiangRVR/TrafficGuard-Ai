@@ -9,33 +9,34 @@ import {
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./styles/styles.css";
 
-import Setup from "./components/Setup"; // we'll alias RouterInfo as Setup
-import Dashboard from "./components/Dashboard"; // new dashboard wrapper
-import Navbar from "./components/Navbar"; // new navbar wrapper
+import AppNavbar from "./components/Navbar";
+import Setup from "./components/Setup";
+import Dashboard from "./components/Dashboard";
 
 function App() {
-  // Tracks whether we've saved routerInfo
+  // true once routerInfo has been saved in localStorage
   const [configured, setConfigured] = useState(
     () => !!localStorage.getItem("routerInfo")
   );
 
-  // Called by Setup when form submits successfully
+  // passed down to Setup so it can flip us into "configured" state
   const handleConfigured = () => setConfigured(true);
 
   return (
     <BrowserRouter>
-      <Navbar />
+      {/* Always show the navbar */}
+      <AppNavbar />
 
       <Routes>
-        {/* Setup route */}
+        {/* Setup page */}
         <Route
           path="/setup"
           element={<Setup onSuccess={handleConfigured} />}
         />
 
-        {/* Dashboard route; if not configured, redirect to /setup */}
+        {/* Dashboard page */}
         <Route
-          path="/"
+          path="/dashboard"
           element={
             configured ? (
               <Dashboard />
@@ -45,12 +46,24 @@ function App() {
           }
         />
 
-        {/* Catch-all: send unknown URLs to dashboard or setup */}
+        {/* Redirect “/” to either /dashboard or /setup */}
+        <Route
+          path="/"
+          element={
+            configured ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <Navigate to="/setup" replace />
+            )
+          }
+        />
+
+        {/* Catch-all redirects */}
         <Route
           path="*"
           element={
             configured ? (
-              <Navigate to="/" replace />
+              <Navigate to="/dashboard" replace />
             ) : (
               <Navigate to="/setup" replace />
             )
