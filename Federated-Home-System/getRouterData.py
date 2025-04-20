@@ -5,7 +5,7 @@ def get_router_data_via_ssh(router_ip, username, password, command):
     try:
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(router_ip, username=username, password=password, banner_timeout=10)
+        ssh.connect(router_ip, username=username, password=password, banner_timeout=60)
         stdin, stdout, stderr = ssh.exec_command(command)
         output = stdout.read().decode()
 
@@ -13,7 +13,18 @@ def get_router_data_via_ssh(router_ip, username, password, command):
         return output
     except Exception as e:
         return f"Error: {e}"
+    finally:
+        if ssh:
+            ssh.close()
 
+def try_get_router(router_ip, username, password):
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(router_ip, username=username, password=password, banner_timeout=15)
+
+    ssh.close()
+    
+    
 
 # Variables
 router_ip = "192.168.1.1"

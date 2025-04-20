@@ -204,7 +204,7 @@ const ConsoleOutput = () => {
           </table>
         </div>
         {/* Pagination Controls */}
-        <nav className="mt-2">
+        <nav className="mt-2 overflow-scroll">
           <ul className="pagination pagination-sm mb-0">
             {[...Array(totalPages)].map((_, idx) => (
               <li

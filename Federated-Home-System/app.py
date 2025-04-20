@@ -1,15 +1,62 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, session
 from flask_cors import CORS
-from getRouterData import get_router_data_via_ssh
+from getRouterData import get_router_data_via_ssh, try_get_router
+import json
 import sqlite3
+from datetime import datetime
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS to allow requests from the React app
+app.secret_key = "euuAmXZEFvWD22rDKCtH2yQjMVYTKIa4ZnW8UZ3U-2w"
+CORS(app, supports_credentials=True, origins=["http://localhost:3000"])  # Enable CORS to allow requests from the React app
 
 # Router connection details
 router_ip = "192.168.1.1"
 username = "root"
-password = "Paulo@123"
+password = ""
+
+def set_current_router(router_info: dict):
+    conn = sqlite3.connect('router_data.db')
+    cur = conn.cursor()
+
+    data = json.dumps(router_info)
+
+    cur.execute(
+        ( "CREATE TABLE IF NOT EXISTS router_info ( "
+            "id    INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "key   TEXT    NOT NULL UNIQUE, "
+            "value TEXT )")
+    )
+
+    cur.execute(
+        ("INSERT INTO router_info (key, value) "
+         "VALUES (?, ?) "
+         "ON CONFLICT(key) DO UPDATE SET value=excluded.value"),
+        ('current_router', data)
+    )
+
+    conn.commit()
+    conn.close()
+
+def get_current_router():
+    conn = sqlite3.connect('router_data.db')
+    cur = conn.cursor()
+
+    cur.execute(
+        ("SELECT value "
+         "FROM router_info "
+         "WHERE key = 'current_router'")
+    )
+
+    data = cur.fetchone()
+    conn.close()
+    if data:
+        router = json.loads(data[0])
+        return router["ipAddress"], router["username"], router["password"]
+    else:
+        return None
+
+
+    
 
 # Commands
 commands = {
@@ -27,11 +74,18 @@ commands = {
 @app.route('/api/router', methods=['GET', 'POST'])
 def get_router():
     req = request.get_json()
+
     try:
-        get_router_data_via_ssh(req["ipAddress"], req["username"], req["password"], "echo \"success?\"")
-        router_ip = req["ipAddress"]
-        username = req["username"]
-        password = req["password"]
+        try_get_router(req["ipAddress"], req["username"], req["password"])
+        
+        set_current_router(
+            {
+                "ipAddress": req["ipAddress"],
+                "username": req["username"],
+                "password": req["password"]
+            }
+        )
+
         data = {
             "message": "Connection to the router was successful",
             "status": "Success"
@@ -47,6 +101,8 @@ def get_router():
 def get_data():
     print('Request received!')
     try:
+        router_ip, username, password = get_current_router()
+
         # Fetch router data
         network_log = get_router_data_via_ssh(router_ip, username, password, commands["log_output"])
         device_list = get_router_data_via_ssh(router_ip, username, password, commands["device_list"])
@@ -78,6 +134,8 @@ def get_data():
 def get_logs():
     print('Fetching logs...')
     try:
+        router_ip, username, password = get_current_router()
+
         log_output = get_router_data_via_ssh(router_ip, username, password, commands["log_output"])
         return jsonify({"status": "Success", "logs": log_output})
     except Exception as e:
@@ -88,13 +146,20 @@ def get_logs():
 def get_devices():
     print('Fetching device list...')
     try:
+        router_ip, username, password = get_current_router()
+
         device_list = get_router_data_via_ssh(router_ip, username, password, commands["device_list"])
         devices = []
         for line in device_list.strip().split("\n"):
             parts = line.split()
+            try:
+                lease = datetime.fromtimestamp(int(parts[0]))
+            except:
+                lease = parts[0]
+
             if len(parts) >= 4:
                 devices.append({
-                    "lease_time": parts[0],
+                    "lease_time": lease,
                     "mac_address": parts[1],
                     "ip_address": parts[2],
                     "hostname": parts[3] if len(parts) > 3 else "Unknown",
@@ -108,6 +173,8 @@ def get_devices():
 def get_cpu_memory():
     print('Fetching CPU and memory usage...')
     try:
+        router_ip, username, password = get_current_router()
+
         # Fetch CPU and memory usage data
         cpu_output = get_router_data_via_ssh(router_ip, username, password, commands["cpu_usage"])
         memory_output = get_router_data_via_ssh(router_ip, username, password, commands["memory_usage"])
@@ -136,6 +203,8 @@ def get_cpu_memory():
 def get_wireless_clients():
     print('Fetching wireless clients...')
     try:
+        router_ip, username, password = get_current_router()
+
         # Attempt using iwinfo as an alternative
         wireless_clients = get_router_data_via_ssh(router_ip, username, password, "iwinfo wlan0 assoclist")
         if not wireless_clients.strip():  # Fallback if no data is returned
@@ -149,6 +218,8 @@ def get_wireless_clients():
 def get_firewall_rules():
     print('Fetching firewall rules...')
     try:
+        router_ip, username, password = get_current_router()
+
         # Attempt using iptables and fallback to reading firewall config
         firewall_rules = get_router_data_via_ssh(router_ip, username, password, "iptables -L -v")
         if not firewall_rules.strip():  # Fallback if no data is returned
@@ -162,6 +233,8 @@ def get_firewall_rules():
 def get_uptime_load():
     print('Fetching uptime and load...')
     try:
+        router_ip, username, password = get_current_router()
+
         uptime_load = get_router_data_via_ssh(router_ip, username, password, commands["uptime_load"])
         return jsonify({"status": "Success", "uptime_load": uptime_load})
     except Exception as e:
@@ -172,6 +245,8 @@ def get_uptime_load():
 def get_network_config():
     print('Fetching network configuration...')
     try:
+        router_ip, username, password = get_current_router()
+
         network_config = get_router_data_via_ssh(router_ip, username, password, commands["network_config"])
         return jsonify({"status": "Success", "network_config": network_config})
     except Exception as e:
@@ -186,7 +261,7 @@ def recreate_database():
         cursor.execute("""
             CREATE TABLE router_info (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                key TEXT,
+                key TEXT NOT NULL UNIQUE,
                 value TEXT
             )
         """)
@@ -211,6 +286,8 @@ def save_data_to_db(data):
 def get_bandwidth():
     print('Fetching bandwidth data...')
     try:
+        router_ip, username, password = get_current_router()
+
         # Execute the bandwidth command via SSH
         bandwidth_output = get_router_data_via_ssh(router_ip, username, password, commands["bandwidth"])
 

@@ -35,9 +35,9 @@ const DeviceList = () => {
     }
   };
 
-  /* useEffect(() => {
+  useEffect(() => {
     fetchDevices();
-  }, []); */
+  }, []);
 
   
 
