@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   Table,
@@ -7,6 +7,7 @@ import {
   FormControl,
   Button,
 } from "react-bootstrap";
+import { useAutoRefresh } from "../hooks/useAutoRefresh";
 
 const DeviceList = () => {
   const [devices, setDevices] = useState([]);
@@ -14,7 +15,8 @@ const DeviceList = () => {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("");
 
-  const fetchDevices = async () => {
+  // Stable fetch function
+  const fetchDevices = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -33,13 +35,10 @@ const DeviceList = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchDevices();
   }, []);
 
-  
+  // Auto‑refresh on mount & every 65s
+  useAutoRefresh(fetchDevices, 65000);
 
   const filtered = devices.filter((d) =>
     [d.mac_address, d.ip_address, d.hostname].some(

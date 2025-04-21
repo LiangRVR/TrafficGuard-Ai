@@ -1,4 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import {
   Card,
   Table,
@@ -9,6 +13,8 @@ import {
   Badge,
 } from "react-bootstrap";
 
+import { useAutoRefresh } from "../hooks/useAutoRefresh";
+
 const BandwidthUsage = () => {
   const [bandwidthData, setBandwidthData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +24,7 @@ const BandwidthUsage = () => {
   // Threshold in bytes for “high” usage (e.g. 100 MB)
   const HIGH_USAGE_THRESHOLD = 100 * 1024 * 1024;
 
-  const fetchBandwidth = async () => {
+  const fetchBandwidth = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -37,11 +43,10 @@ const BandwidthUsage = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchBandwidth();
   }, []);
+
+  // Auto‐refresh on mount and every 30 seconds
+  useAutoRefresh(fetchBandwidth, 30000);
 
   // Simple client‑side filter by interface name
   const filtered = bandwidthData.filter((iface) =>

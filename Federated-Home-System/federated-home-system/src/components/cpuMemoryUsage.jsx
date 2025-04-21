@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   ProgressBar,
@@ -7,6 +7,7 @@ import {
   Spinner,
   Button,
 } from "react-bootstrap";
+import { useAutoRefresh } from "../hooks/useAutoRefresh";
 
 const CpuMemoryUsage = () => {
   const [cpuData, setCpuData] = useState({});
@@ -14,7 +15,8 @@ const CpuMemoryUsage = () => {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
 
-  const fetchStats = async () => {
+  // Fetch function wrapped in useCallback so it's stable
+  const fetchStats = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(
@@ -33,13 +35,10 @@ const CpuMemoryUsage = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchStats();
-    const interval = setInterval(fetchStats, 30000); // auto-refresh every 30s
-    return () => clearInterval(interval);
   }, []);
+
+  // Auto-refresh on mount and every 25 seconds
+  useAutoRefresh(fetchStats, 25000);
 
   if (loading) {
     return (

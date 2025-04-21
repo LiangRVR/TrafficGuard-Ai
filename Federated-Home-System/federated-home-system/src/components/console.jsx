@@ -1,5 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { useAutoRefresh } from "../hooks/useAutoRefresh";
 
 const ConsoleOutput = () => {
   const [rawLogs, setRawLogs] = useState("");
@@ -11,28 +16,30 @@ const ConsoleOutput = () => {
   const [copiedId, setCopiedId] = useState(null);
   const entriesPerPage = 10;
 
-   // Fetch logs from API
-  useEffect(() => {
-    const fetchLogs = async () => {
-      try {
-        const res = await fetch(
-          "http://127.0.0.1:5000/api/logs"
-        );
-        const data = await res.json();
-        if (data.status === "Success")
-          setRawLogs(data.logs);
-        else
-          console.error("Error fetching logs:", data.error);
-      } catch (err) {
-        console.error("Fetch failed:", err);
-      } finally {
-        setLoading(false);
+  // Fetch logs from API
+  const fetchLogs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(
+        "http://127.0.0.1:5000/api/logs"
+      );
+      const data = await res.json();
+      if (data.status === "Success") {
+        setRawLogs(data.logs);
+      } else {
+        console.error("Error fetching logs:", data.error);
       }
-    };
-    fetchLogs();
+    } catch (err) {
+      console.error("Fetch failed:", err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
- /*  // Mock logs for local testing
+  // Auto‑refresh on mount and every 40s
+  useAutoRefresh(fetchLogs, 40000);
+
+  /*  // Mock logs for local testing
   useEffect(() => {
     setLoading(false);
     const mockLogs = `
