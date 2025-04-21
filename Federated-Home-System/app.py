@@ -1,9 +1,10 @@
 from flask import Flask, jsonify, request, session
 from flask_cors import CORS
-from getRouterData import get_router_data_via_ssh, try_get_router
+from datetime import datetime
 import json
 import sqlite3
-from datetime import datetime
+import atexit
+import router_controller
 
 app = Flask(__name__)
 app.secret_key = "euuAmXZEFvWD22rDKCtH2yQjMVYTKIa4ZnW8UZ3U-2w"
@@ -76,7 +77,7 @@ def get_router():
     req = request.get_json()
 
     try:
-        try_get_router(req["ipAddress"], req["username"], req["password"])
+        router_controller.try_get_router(req["ipAddress"], req["username"], req["password"])
         
         set_current_router(
             {
@@ -104,9 +105,9 @@ def get_data():
         router_ip, username, password = get_current_router()
 
         # Fetch router data
-        network_log = get_router_data_via_ssh(router_ip, username, password, commands["log_output"])
-        device_list = get_router_data_via_ssh(router_ip, username, password, commands["device_list"])
-        general_info = get_router_data_via_ssh(router_ip, username, password, commands["network_config"])
+        network_log = router_controller.get_router_data_via_ssh(router_ip, username, password, commands["log_output"])
+        device_list = router_controller.get_router_data_via_ssh(router_ip, username, password, commands["device_list"])
+        general_info = router_controller.get_router_data_via_ssh(router_ip, username, password, commands["network_config"])
 
         # Format the data to send as a JSON response
         data = {
@@ -136,7 +137,7 @@ def get_logs():
     try:
         router_ip, username, password = get_current_router()
 
-        log_output = get_router_data_via_ssh(router_ip, username, password, commands["log_output"])
+        log_output = router_controller.get_router_data_via_ssh(router_ip, username, password, commands["log_output"])
         return jsonify({"status": "Success", "logs": log_output})
     except Exception as e:
         return jsonify({"status": "Error", "error": str(e)})
@@ -148,7 +149,7 @@ def get_devices():
     try:
         router_ip, username, password = get_current_router()
 
-        device_list = get_router_data_via_ssh(router_ip, username, password, commands["device_list"])
+        device_list = router_controller.get_router_data_via_ssh(router_ip, username, password, commands["device_list"])
         devices = []
         for line in device_list.strip().split("\n"):
             parts = line.split()
@@ -176,8 +177,8 @@ def get_cpu_memory():
         router_ip, username, password = get_current_router()
 
         # Fetch CPU and memory usage data
-        cpu_output = get_router_data_via_ssh(router_ip, username, password, commands["cpu_usage"])
-        memory_output = get_router_data_via_ssh(router_ip, username, password, commands["memory_usage"])
+        cpu_output = router_controller.get_router_data_via_ssh(router_ip, username, password, commands["cpu_usage"])
+        memory_output = router_controller.get_router_data_via_ssh(router_ip, username, password, commands["memory_usage"])
 
         # Parse CPU usage data
         cpu_data = {}
@@ -206,9 +207,9 @@ def get_wireless_clients():
         router_ip, username, password = get_current_router()
 
         # Attempt using iwinfo as an alternative
-        wireless_clients = get_router_data_via_ssh(router_ip, username, password, "iwinfo wlan0 assoclist")
+        wireless_clients = router_controller.get_router_data_via_ssh(router_ip, username, password, "iwinfo wlan0 assoclist")
         if not wireless_clients.strip():  # Fallback if no data is returned
-            wireless_clients = get_router_data_via_ssh(router_ip, username, password, "iw dev wlan0 station dump")
+            wireless_clients = router_controller.get_router_data_via_ssh(router_ip, username, password, "iw dev wlan0 station dump")
         return jsonify({"status": "Success", "wireless_clients": wireless_clients})
     except Exception as e:
         return jsonify({"status": "Error", "error": str(e)})
@@ -221,9 +222,9 @@ def get_firewall_rules():
         router_ip, username, password = get_current_router()
 
         # Attempt using iptables and fallback to reading firewall config
-        firewall_rules = get_router_data_via_ssh(router_ip, username, password, "iptables -L -v")
+        firewall_rules = router_controller.get_router_data_via_ssh(router_ip, username, password, "iptables -L -v")
         if not firewall_rules.strip():  # Fallback if no data is returned
-            firewall_rules = get_router_data_via_ssh(router_ip, username, password, "cat /etc/config/firewall")
+            firewall_rules = router_controller.get_router_data_via_ssh(router_ip, username, password, "cat /etc/config/firewall")
         return jsonify({"status": "Success", "firewall_rules": firewall_rules})
     except Exception as e:
         return jsonify({"status": "Error", "error": str(e)})
@@ -235,7 +236,7 @@ def get_uptime_load():
     try:
         router_ip, username, password = get_current_router()
 
-        uptime_load = get_router_data_via_ssh(router_ip, username, password, commands["uptime_load"])
+        uptime_load = router_controller.get_router_data_via_ssh(router_ip, username, password, commands["uptime_load"])
         return jsonify({"status": "Success", "uptime_load": uptime_load})
     except Exception as e:
         return jsonify({"status": "Error", "error": str(e)})
@@ -247,7 +248,7 @@ def get_network_config():
     try:
         router_ip, username, password = get_current_router()
 
-        network_config = get_router_data_via_ssh(router_ip, username, password, commands["network_config"])
+        network_config = router_controller.get_router_data_via_ssh(router_ip, username, password, commands["network_config"])
         return jsonify({"status": "Success", "network_config": network_config})
     except Exception as e:
         return jsonify({"status": "Error", "error": str(e)})
@@ -289,7 +290,7 @@ def get_bandwidth():
         router_ip, username, password = get_current_router()
 
         # Execute the bandwidth command via SSH
-        bandwidth_output = get_router_data_via_ssh(router_ip, username, password, commands["bandwidth"])
+        bandwidth_output = router_controller.get_router_data_via_ssh(router_ip, username, password, commands["bandwidth"])
 
         # Parse and format the output from /proc/net/dev
         lines = bandwidth_output.strip().split("\n")[2:]  # Skip the header lines
@@ -312,3 +313,8 @@ def get_bandwidth():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
+@atexit.register
+def close_router_controller():
+    router_controller.shutdown()
