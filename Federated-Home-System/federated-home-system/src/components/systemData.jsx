@@ -61,15 +61,6 @@ const SystemData = () => {
     return <p>Loading system data...</p>;
   }
 
-  let filteredRules = []
-
-  const rules = data.firewallRules?.firewall_rules || [];
-    // rules is a string. The following results in an error
-  // filteredRules = rules.filter(
-  //   (r) =>
-  //     filterAction === "All" || r.action === filterAction
-  // );
-
 
   return (
     <div className="row">
@@ -105,59 +96,16 @@ const SystemData = () => {
           <div className="card-body">
             <h5>🛡️ Firewall Rules</h5>
             <hr />
-            <div className="d-flex align-items-center mb-2">
-              <label
-                htmlFor="filterAction"
-                className="me-2 mb-0"
-              >
-                Filter by Action:
-              </label>
-              <select
-                id="filterAction"
-                className="form-select form-select-sm w-auto"
-                value={filterAction}
-                onChange={(e) =>
-                  setFilterAction(e.target.value)
-                }
-              >
-                <option value="All">All</option>
-                <option value="ALLOW">Allow</option>
-                <option value="DENY">Deny</option>
-              </select>
-            </div>
-            <div className="table-responsive">
-              <table className="table table-striped mb-0">
-                <thead>
-                  <tr>
-                    <th>Rule Name</th>
-                    <th>Action</th>
-                    <th>Port/IP</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRules.map((rule, idx) => (
-                    <tr key={idx}>
-                      <td>{rule.name}</td>
-                      <td>
-                        <span
-                          className={
-                            rule.action === "ALLOW"
-                              ? "badge bg-success"
-                              : "badge bg-danger"
-                          }
-                        >
-                          {rule.action}
-                        </span>
-                      </td>
-                      <td>
-                        {rule.port ||
-                          rule.ip ||
-                          rule.port_ip}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div
+              style={{
+                maxHeight: '200px',
+                overflowY: 'auto',
+                backgroundColor: '#f8f9fa',
+                padding: '10px',
+                border: '1px solid #dee2e6',
+              }}
+            >
+              <pre>{data.firewallRules?.firewall_rules || 'N/A'}</pre>
             </div>
           </div>
         </div>
