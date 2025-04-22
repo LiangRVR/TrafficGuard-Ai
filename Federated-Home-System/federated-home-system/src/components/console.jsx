@@ -39,14 +39,13 @@ const ConsoleOutput = () => {
   // Auto‑refresh on mount and every 40s
   useAutoRefresh(fetchLogs, 40000);
 
-  /*  // Mock logs for local testing
+/*    // Mock logs for local testing
   useEffect(() => {
     setLoading(false);
     const mockLogs = `
-2025-04-17T10:00:00.000Z Router: INFO System boot
-2025-04-17T10:05:12.123Z Router: WARN Unexpected inbound traffic from IP 192.168.1.50
-2025-04-17T10:10:45.543Z Router: ERROR DHCP failure on interface eth0
-2025-04-17T10:12:34.789Z Router: INFO Connection re-established
+Mon Apr 21 23:36:21 2025 kern.info kernel: [0.000000] Board has DDR2
+Mon Apr 21 23:36:21 2025 kern.info kernel: [0.000000] Analog PMU set to hw control
+Mon Apr 21 23:36:21 2025 kern.notice kernel: [e.eeee] Linux version 4.14.180 (builder@buildhost) (gcc version 7.5.0 (OpenWrt GCC 7.5.0 r11063-85e84e9f46)) #0 Sat May 16 18:32:20 2020
   `;
     setRawLogs(mockLogs);
   }, []); */
@@ -57,16 +56,42 @@ const ConsoleOutput = () => {
       .split("\n")
       .filter((line) => line.trim());
     const parsed = lines.map((line, idx) => {
+      // 1) Capture the syslog timestamp, facility and severity, plus the rest of the message
       const parts = line.match(
-        /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)?\s*(.*)$/
+        /^([A-Z][a-z]{2}\s+[A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s+\d{4})\s+(\S+)\.(\w+)\s+(.*)$/
       );
-      const timestamp = parts && parts[1] ? parts[1] : "";
-      const message = parts && parts[2] ? parts[2] : line;
+
+      // 2) Extract or fall back
+      const timestamp = parts ? parts[1] : "";
+      const severity = parts ? parts[3].toLowerCase() : "";
+      const message = parts ? parts[4] : line;
+
+      console.log("Timestamp: ",timestamp);
+      console.log("Severity: ",severity);
+      console.log("Message: ",message);
+      // 3) Map common severities into your levels
       let level = "Info";
-      if (/ERROR|Error/.test(message)) level = "Error";
-      else if (/WARN|Warning/.test(message))
+      if (
+        [
+          "err",
+          "error",
+          "crit",
+          "alert",
+          "emerg",
+          "panic",
+        ].includes(severity)
+      ) {
+        level = "Error";
+      } else if (["warn", "warning"].includes(severity)) {
         level = "Warning";
-      return { id: idx + 1, timestamp, message, level };
+      }
+
+      return {
+        id: idx + 1,
+        timestamp, // e.g. "Mon Apr 21 23:36:21 2025"
+        message, // e.g. "kernel: [0.000000] Board has DDR2"
+        level, // "Info" | "Warning" | "Error"
+      };
     });
     setLogs(parsed);
   }, [rawLogs]);
